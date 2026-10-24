@@ -106,7 +106,7 @@ adb shell settings put global http_proxy :0
     ├── AndroidManifest.xml
     ├── build.sh                 # 手动编译、打包及签名脚本
     ├── Google联网修复.apk       # 当前安装包
-    ├── 使用说明.txt
+    ├── README.md                # App 使用说明
     ├── res/                     # 图标和主题
     └── src/cn/kingour/googleprobe/
         ├── MainActivity.java    # 界面和启动入口
@@ -120,27 +120,15 @@ adb shell settings put global http_proxy :0
 
 ## 从源码构建
 
-当前工程使用独立 Shell 脚本，未配置 Gradle。需要 JDK 17、Android SDK 工具，以及 `bash`、`zip`、`openssl`；脚本以 Java 8 目标格式编译源码。
-
-**仓库未附带 SDK，直接执行脚本前需要准备工具路径。** 当前 [build.sh](app/build.sh) 固定读取以下仓库相对布局：
-
-```text
- tools/android-sdk/
- ├── android-10/android.jar
- └── android-14/
-     ├── aapt2
-     ├── d8
-     ├── zipalign
-     └── apksigner
-```
-
-这是脚本使用的本地目录命名，不是标准 SDK 安装布局。请根据自己的 SDK 安装位置调整脚本中的 `SDK_DIR`、`TOOLS_DIR` 和 `ANDROID_JAR`，使其分别指向 SDK 工具目录及可用的 Android 平台 `android.jar`；工具需适用于当前操作系统。
-
-准备好后，在仓库根目录运行：
+当前工程使用独立 Shell 脚本，未配置 Gradle。可通过 [prepare_deps.sh](app/prepare_deps.sh) 自动下载本地 JDK 17、Android SDK 工具、API 29 平台文件和 ADB，支持 HTTP / SOCKS5 代理：
 
 ```bash
+# 在仓库根目录执行，替换为电脑上的代理地址
+HTTPS_PROXY=http://127.0.0.1:7897 bash app/prepare_deps.sh
 bash app/build.sh
 ```
+
+依赖版本、系统要求、代理设置及许可证选项见 [App 构建依赖说明](app/README.md#下载构建依赖)。SDK 使用标准目录 `tools/android-sdk/`，JDK 位于 `tools/jdk/`；这些下载文件不纳入版本控制。构建以 Java 8 目标格式编译源码。
 
 脚本会生成资源和 Java 字节码、转换 DEX、打包、对齐、签名，并执行签名验证；输出覆盖 `app/Google联网修复.apk`，中间文件位于 `app/build/`。
 

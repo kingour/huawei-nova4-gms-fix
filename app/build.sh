@@ -2,8 +2,18 @@
 set -euo pipefail
 APP_DIR="$(cd "$(dirname "$0")" && pwd)"
 SDK_DIR="$APP_DIR/../tools/android-sdk"
-TOOLS_DIR="$SDK_DIR/android-14"
-ANDROID_JAR="$SDK_DIR/android-10/android.jar"
+TOOLS_DIR="$SDK_DIR/build-tools/34.0.0"
+ANDROID_JAR="$SDK_DIR/platforms/android-29/android.jar"
+if [ -d "$APP_DIR/../tools/jdk" ]; then
+    export JAVA_HOME="$(cd "$APP_DIR/../tools/jdk" && pwd)"
+    export PATH="$JAVA_HOME/bin:$PATH"
+fi
+for dependency in "$TOOLS_DIR/aapt2" "$TOOLS_DIR/d8" "$TOOLS_DIR/zipalign" "$TOOLS_DIR/apksigner" "$ANDROID_JAR"; do
+    [ -f "$dependency" ] || { echo "Missing $dependency. Run: bash app/prepare_deps.sh" >&2; exit 1; }
+done
+for command in javac java keytool zip openssl; do
+    command -v "$command" >/dev/null || { echo "Missing prerequisite: $command" >&2; exit 1; }
+done
 BUILD_DIR="$APP_DIR/build"
 mkdir -p "$BUILD_DIR/classes" "$BUILD_DIR/dex" "$BUILD_DIR/generated" "$APP_DIR/signing"
 "$TOOLS_DIR/aapt2" compile --dir "$APP_DIR/res" -o "$BUILD_DIR/resources.zip"
