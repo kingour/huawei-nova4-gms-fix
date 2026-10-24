@@ -1,0 +1,13 @@
+# Local signing keys and passwords
+/app/signing/
+
+# Generated build outputs and signing sidecars
+/app/build/
+/app/*.idsig
+
+# Local SDK tools
+/tools/android-sdk/
+
+# Local agent state and OS metadata
+.omx/
+.DS_Store
