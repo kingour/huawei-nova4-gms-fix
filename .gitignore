@@ -12,3 +12,9 @@
 # Local agent state and OS metadata
 .omx/
 .DS_Store
+
+# Private device logs, extracted firmware, historical binaries and local tools
+/diagnostics/local/
+/tools/vendor/
+/tools/http-probe/build/
+/tools/cdex/build/

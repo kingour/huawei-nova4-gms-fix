@@ -1,0 +1,33 @@
+TARGET=http://www.google.com FOLLOW_REDIRECTS=true
+DEFAULT_USER_AGENT=Dalvik/2.1.0 (Linux; U; Android 10; VCE-AL00 Build/HUAWEIVCE-AL00)
+DNS=[www.google.com/142.251.156.119, www.google.com/142.251.154.119, www.google.com/142.251.150.119, www.google.com/142.251.153.119, www.google.com/142.251.155.119, www.google.com/142.251.152.119, www.google.com/142.251.151.119, www.google.com/142.251.157.119]
+EXPLICIT_HTTP_PROXY=false
+HTTP_STATUS=404
+FINAL_URL=http://www.google.cn/m
+LOCATION=null
+CONTENT_TYPE=text/html; charset=UTF-8
+CONTENT_LENGTH=1562
+BODY_BYTES_READ=1562
+ELAPSED_MS=693
+TARGET=http://www.google.com/ncr FOLLOW_REDIRECTS=true
+DEFAULT_USER_AGENT=Dalvik/2.1.0 (Linux; U; Android 10; VCE-AL00 Build/HUAWEIVCE-AL00)
+DNS=[www.google.com/142.251.156.119, www.google.com/142.251.154.119, www.google.com/142.251.150.119, www.google.com/142.251.153.119, www.google.com/142.251.155.119, www.google.com/142.251.152.119, www.google.com/142.251.151.119, www.google.com/142.251.157.119]
+EXPLICIT_HTTP_PROXY=false
+HTTP_STATUS=404
+FINAL_URL=http://www.google.cn/m
+LOCATION=null
+CONTENT_TYPE=text/html; charset=UTF-8
+CONTENT_LENGTH=1562
+BODY_BYTES_READ=1562
+ELAPSED_MS=661
+TARGET=https://www.google.com FOLLOW_REDIRECTS=true
+DEFAULT_USER_AGENT=Dalvik/2.1.0 (Linux; U; Android 10; VCE-AL00 Build/HUAWEIVCE-AL00)
+DNS=[www.google.com/142.251.156.119, www.google.com/142.251.154.119, www.google.com/142.251.150.119, www.google.com/142.251.153.119, www.google.com/142.251.155.119, www.google.com/142.251.152.119, www.google.com/142.251.151.119, www.google.com/142.251.157.119]
+EXPLICIT_HTTP_PROXY=false
+HTTP_STATUS=302
+FINAL_URL=https://www.google.com
+LOCATION=http://www.google.cn/m
+CONTENT_TYPE=text/html; charset=UTF-8
+CONTENT_LENGTH=219
+BODY_BYTES_READ=219
+ELAPSED_MS=559

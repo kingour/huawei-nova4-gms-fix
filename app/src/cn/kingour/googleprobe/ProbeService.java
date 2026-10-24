@@ -10,6 +10,11 @@ import android.content.Context;
 import android.content.Intent;
 import android.content.pm.PackageManager;
 import android.net.wifi.WifiManager;
+import android.net.ConnectivityManager;
+import android.net.NetworkCapabilities;
+import android.net.Network;
+import java.io.IOException;
+import java.net.InetAddress;
 import android.os.Handler;
 import android.os.IBinder;
 import android.os.Looper;
@@ -132,6 +137,15 @@ public final class ProbeService extends Service {
                     @Override public void onFatalError() {
                         fail(token, "代理监听已退出", "已停止修复并尝试清理系统代理。");
                     }
+                }, new LoopbackProxy.DirectConnector() {
+                    @Override public void connect(Socket socket, String host, int port) throws IOException {
+                        Network network = requireVpnNetwork();
+                        // Bind the socket and DNS to this VPN; do not silently fall back to Wi-Fi.
+                        network.bindSocket(socket);
+                        InetAddress[] addresses = network.getAllByName(host);
+                        if (addresses.length == 0) throw new IOException("VPN DNS returned no address");
+                        socket.connect(new InetSocketAddress(addresses[0], port), 15000);
+                    }
                 });
                 proxy.start();
             }
@@ -161,7 +175,18 @@ public final class ProbeService extends Service {
         }
     }
 
+    private Network requireVpnNetwork() throws IOException {
+        ConnectivityManager connectivity = (ConnectivityManager) getSystemService(CONNECTIVITY_SERVICE);
+        Network network = connectivity == null ? null : connectivity.getActiveNetwork();
+        NetworkCapabilities capabilities = network == null ? null : connectivity.getNetworkCapabilities(network);
+        if (capabilities == null || !capabilities.hasTransport(NetworkCapabilities.TRANSPORT_VPN)) {
+            throw new IOException("VPN 未连接，请先启动 NekoBox VPN；未继续修复。");
+        }
+        return network;
+    }
+
     private void checkUpstream() throws Exception {
+        requireVpnNetwork();
         try (Socket socket = new Socket()) {
             socket.connect(new InetSocketAddress("127.0.0.1", 2080), 2000);
         } catch (Exception e) {
@@ -181,7 +206,10 @@ public final class ProbeService extends Service {
             connection.setInstanceFollowRedirects(true);
             connection.setUseCaches(false);
             int code = connection.getResponseCode();
-            if (code != 200) throw new Exception("Google 实际响应不是 200（" + code + "），未启用系统代理。");
+            // Fixed probe only: log no query strings, headers, bodies or credentials.
+            String finalHost = connection.getURL().getHost();
+            android.util.Log.i("GoogleProbe", "HTTP probe status=" + code + " finalHost=" + finalHost);
+            if (code != 200) throw new Exception("Google 实际响应不是 200（" + code + "，" + finalHost + "），未启用系统代理。");
             try (InputStreamReader input = new InputStreamReader(connection.getInputStream(), StandardCharsets.UTF_8)) {
                 int count = 0;
                 while (count < 3 && input.read() != -1) count++;

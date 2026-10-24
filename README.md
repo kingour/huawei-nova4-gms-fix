@@ -2,7 +2,7 @@
 
 用于华为 nova4 的 Google 联网检测修复工具。通过本地 HTTP 转发代理调整 Google 检测请求的 User-Agent，尝试恢复系统对 Google 网络可用性的判断及 Google 账号登录流程。
 
-当前 App 版本为 **1.1**（versionCode `2`），包名为 `cn.kingour.googleprobe`。无需 Root，首次使用需要通过 ADB 授权。本项目是针对特定设备故障的绕行方案，不负责安装 GMS，也不提供 VPN 或网络出口。
+当前 App 版本为 **1.2**（versionCode `3`），包名为 `cn.kingour.googleprobe`。无需 Root，首次使用需要通过 ADB 授权。本项目是针对特定设备故障的绕行方案，不负责安装 GMS，也不提供 VPN 或网络出口。
 
 ## 适用环境
 
@@ -25,17 +25,22 @@ Manifest 声明最低 Android 8.0（API 26）、目标 API 28；最低版本声�
 遵循系统 HTTP 代理的请求
     ↓ 系统代理 127.0.0.1:31808
 本应用 LoopbackProxy
-    ↓ 上游 HTTP 代理 127.0.0.1:2080
+    ├─ www.google.com:80 HTTP → 改写 UA → NekoBox HTTP 入口 127.0.0.1:2080
+    ├─ www.google.com.hk:80 HTTP → 保留 UA → 同一 NekoBox HTTP 入口
+    └─ 其他 HTTP / HTTPS CONNECT → 建立目标 TCP 连接 → 当前 VPN 网络
 NekoBox → 网络
 ```
 
 - 仅对目标为 `http://www.google.com`、端口为 80 或未指定端口的请求，将 User-Agent 改为 `curl/8.0`。
-- 其他 HTTP 请求继续转发；实现也会调整连接管理头。
-- HTTPS 使用 CONNECT 隧道转发，不解密 TLS，不伪造 Google 的成功响应。
-- 启动时先检查上游端口，再经本地代理验证 Google 返回 HTTP 200、正文至少三个字符，成功后才设置系统代理。
+- 为保持本机检测重定向链兼容，`http://www.google.com.hk:80` 也经 `2080` 转发，但不改 UA。该路径曾在直接连接时触发 Google 验证码/429，不能把它视为所有出口均不可用。
+- 除上述两个主机外，其他 HTTP 请求直接连接目标，保留 UA，并将代理形式请求行转换为目标服务器需要的形式；不再转给 NekoBox 的本地 HTTP 入口。实现会调整连接管理头并移除代理认证头。
+- HTTPS CONNECT 由本应用直接连接目标并双向传输字节，TLS 握手和验证由客户端完成，不解密 TLS，不伪造 Google 的成功响应。目标连接和 DNS 显式绑定当前 VPN，VPN 不可用时失败而不回退物理网络；依赖 NekoBox VPN 接管，不能将本应用排除在 VPN 之外。
+- 启动和运行期间检查当前默认网络具有 VPN 传输能力及 NekoBox 上游端口；这不能验证 VPN 的提供者、分应用排除或分流出口。启动时先检查上游端口，再经本地代理验证 Google 返回 HTTP 200、正文至少三个字符，成功后才设置系统代理。
 - 若 Wi-Fi 已开启，会短暂关闭并重新开启，以触发系统检测。
 
-**这是系统全局 HTTP 代理设置，所有遵循它的应用请求都可能经过本应用，并非仅影响 GMS。** 不遵循系统代理的流量不在本工具控制范围内。
+**这是系统全局 HTTP 代理设置，所有遵循它的应用请求仍会经过本应用，并非仅影响 GMS。** “其他请求走 VPN”表示本应用将目标连接和 DNS 绑定当前 VPN 网络，不是收到请求后直接丢弃或让客户端自动绕过代理。
+
+1.2 将同时处理的客户端连接上限从 16 提高为 **128**，监听 backlog 请求值为 **32**，另有 **32** 个已接受连接的等待位置。工作连接和等待队列都满时，接收线程等待队列空位，后续连接在系统监听队列等待；不再因为线程池满而立即关闭新连接。系统 backlog 的实际长度由 Android 内核决定，全部等待位置耗尽时仍可能发生客户端超时，不提供无限排队。 不遵循系统代理的流量不在本工具控制范围内。
 
 ## 安装与授权
 
@@ -102,6 +107,8 @@ adb shell settings put global http_proxy :0
 .
 ├── LICENSE
 ├── README.md
+├── diagnostics/              # 诊断索引、公开证据及被忽略的本地归档
+├── tools/                    # HTTP/CDEX 辅助源码及被忽略的本地依赖
 └── app/
     ├── AndroidManifest.xml
     ├── build.sh                 # 手动编译、打包及签名脚本
@@ -116,7 +123,7 @@ adb shell settings put global http_proxy :0
         └── BootReceiver.java    # 开机、更新后的残留清理
 ```
 
-本仓库包含 Android App 工程，未包含原诊断环境中的日志、反编译产物及旧版 ADB JAR；本文不再引用这些文件。
+本仓库包含 Android App 和历史 HTTP 诊断工具源码。[诊断资料索引](diagnostics/README.md) 整理了历史结论、可公开的 HTTP 对照记录及本地归档位置；原始设备日志、提取物与反编译产物仅在本地保留，不纳入 Git。
 
 ## 从源码构建
 
@@ -136,7 +143,7 @@ bash app/build.sh
 
 ## 验证范围与限制
 
-原项目记录在 2026-10-24 对 App 1.1 完成了构建和签名检查，并在上述 nova4 上验证启动、短时间切换后台、显式停止及再次启动，ADB 曾读取到 `mIsGoogleConnectOk=true`。这些是历史实机记录，本次文档整理未重新测试设备，原始诊断证据未随仓库提供。
+原项目记录在 2026-10-24 对 App 1.1 完成了构建和签名检查，并在上述 nova4 上验证启动、短时间切换后台、显式停止及再次启动，ADB 曾读取到 `mIsGoogleConnectOk=true`。上述 1.1 结果为历史记录；1.2 已完成本地回归、覆盖安装及启动恢复验证，详情见 [App 验证记录](app/README.md#12-验证记录2026-10-24)。部分 HTTP 对照和状态快照见[诊断资料](diagnostics/README.md)，完整原始日志仅本地归档。
 
 - 不保证整夜待机、华为省电清理或长期无人值守可靠性。
 - 最近任务移除、通知栏停止和真实重启恢复尚未分别完成实机操作验证。
